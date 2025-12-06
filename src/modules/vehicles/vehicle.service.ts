@@ -20,7 +20,12 @@ const createVehicleService = async (payload: VehiclePayload) => {
   const result = await pool.query(
     `INSERT INTO vehicles (vehicle_name, type, registration_number, daily_rent_price, availability_status)
      VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, vehicle_name, type, registration_number, daily_rent_price, availability_status`,
+     RETURNING 
+      id, 
+      vehicle_name, 
+      type, registration_number, 
+      daily_rent_price::float AS daily_rent_price, 
+      availability_status`,
     [
       vehicle_name,
       type,

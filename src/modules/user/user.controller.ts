@@ -26,6 +26,56 @@ const getAllUser = async (req: Request, res: Response) => {
   }
 };
 
+const updateUser = async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.userId ?? "", 10);
+    const loggedInUser = (req as any).user;
+
+    if (isNaN(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID",
+      });
+    }
+
+    // CUSTOMER cannot update email or role
+    if (loggedInUser.role === "customer") {
+      delete req.body.email;
+      delete req.body.role;
+    }
+
+    // EMAIL SHOULD NEVER BE CHANGED
+    // If email is in body, block it
+    if (req.body.email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email cannot be updated",
+      });
+    }
+
+    const updatedUser = await userServices.updateUserService(userId, req.body);
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "User updated successfully",
+      data: updatedUser,
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      message: err.message || "Internal server error",
+    });
+  }
+};
+
 export const userControllers = {
   getAllUser,
+  updateUser,
 };

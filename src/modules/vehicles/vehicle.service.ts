@@ -41,7 +41,7 @@ const createVehicleService = async (payload: VehiclePayload) => {
 // get all Vehicle Service
 const getAllVehiclesService = async () => {
   const result = await pool.query(
-    `SELECT id, vehicle_name, type, registration_number, daily_rent_price, availability_status FROM vehicles`
+    `SELECT id, vehicle_name, type, registration_number, daily_rent_price::float AS daily_rent_price, availability_status FROM vehicles`
   );
 
   return result.rows;

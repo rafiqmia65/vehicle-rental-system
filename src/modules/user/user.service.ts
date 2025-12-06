@@ -30,7 +30,32 @@ const updateUserService = async (userId: number, payload: any) => {
   return result.rows[0] || null;
 };
 
+const deleteUserService = async (userId: number) => {
+  // Check for active bookings first
+  const bookingCheck = await pool.query(
+    `SELECT id FROM bookings WHERE user_id = $1 AND status = 'booked'`,
+    [userId]
+  );
+
+  if (bookingCheck.rows.length > 0) {
+    return "Cannot delete user with active bookings";
+  }
+
+  // Delete user
+  const result = await pool.query(
+    `DELETE FROM users WHERE id = $1 RETURNING id`,
+    [userId]
+  );
+
+  if (!result.rows.length) {
+    return null;
+  }
+
+  return true;
+};
+
 export const userServices = {
   getAllUsers,
   updateUserService,
+  deleteUserService,
 };

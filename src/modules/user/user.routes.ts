@@ -16,4 +16,7 @@ router.put(
   userControllers.updateUser
 );
 
+// Delete User (Admin only)
+router.delete("/:userId", roleTokenVerify("admin"), userControllers.deleteUser);
+
 export const userRoutes = router;

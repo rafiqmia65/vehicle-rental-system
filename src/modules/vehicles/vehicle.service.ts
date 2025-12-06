@@ -7,7 +7,8 @@ interface VehiclePayload {
   daily_rent_price: number;
   availability_status: string;
 }
-// create Vehicle Service
+
+// Create Vehicle Service
 const createVehicleService = async (payload: VehiclePayload) => {
   const {
     vehicle_name,
@@ -18,14 +19,16 @@ const createVehicleService = async (payload: VehiclePayload) => {
   } = payload;
 
   const result = await pool.query(
-    `INSERT INTO vehicles (vehicle_name, type, registration_number, daily_rent_price, availability_status)
+    `INSERT INTO vehicles 
+      (vehicle_name, type, registration_number, daily_rent_price, availability_status)
      VALUES ($1, $2, $3, $4, $5)
      RETURNING 
-      id, 
-      vehicle_name, 
-      type, registration_number, 
-      daily_rent_price::float AS daily_rent_price, 
-      availability_status`,
+        id,
+        vehicle_name,
+        type,
+        registration_number,
+        daily_rent_price::float AS daily_rent_price,
+        availability_status`,
     [
       vehicle_name,
       type,
@@ -38,19 +41,32 @@ const createVehicleService = async (payload: VehiclePayload) => {
   return result.rows[0];
 };
 
-// get all Vehicle Service
+// Get all Vehicles
 const getAllVehiclesService = async () => {
   const result = await pool.query(
-    `SELECT id, vehicle_name, type, registration_number, daily_rent_price::float AS daily_rent_price, availability_status FROM vehicles`
+    `SELECT 
+        id,
+        vehicle_name,
+        type,
+        registration_number,
+        daily_rent_price::float AS daily_rent_price,
+        availability_status
+     FROM vehicles`
   );
 
   return result.rows;
 };
 
-// get Vehicle Service by id
+// Get Vehicle by ID
 const getVehicleByIdService = async (vehicleId: number) => {
   const result = await pool.query(
-    `SELECT id, vehicle_name, type, registration_number, daily_rent_price, availability_status
+    `SELECT 
+        id,
+        vehicle_name,
+        type,
+        registration_number,
+        daily_rent_price::float AS daily_rent_price,
+        availability_status
      FROM vehicles
      WHERE id = $1`,
     [vehicleId]
@@ -67,7 +83,7 @@ interface VehicleUpdatePayload {
   availability_status?: string;
 }
 
-// Update Vehicle Service
+// Update Vehicle
 const updateVehicleService = async (
   vehicleId: number,
   payload: VehicleUpdatePayload
@@ -82,8 +98,14 @@ const updateVehicleService = async (
       daily_rent_price = $4,
       availability_status = $5
     WHERE id = $6
-    RETURNING id, vehicle_name, type, registration_number, daily_rent_price, availability_status
-  `,
+    RETURNING 
+      id,
+      vehicle_name,
+      type,
+      registration_number,
+      daily_rent_price::float AS daily_rent_price,
+      availability_status
+    `,
     [
       payload.vehicle_name ?? null,
       payload.type ?? null,
@@ -99,24 +121,20 @@ const updateVehicleService = async (
 
 // Delete Vehicle only if available
 export const deleteVehicleService = async (vehicleId: number) => {
-  // Check availability status
   const check = await pool.query(
     `SELECT availability_status FROM vehicles WHERE id = $1`,
     [vehicleId]
   );
 
   if (check.rows.length === 0) {
-    return null; // Vehicle not found
+    return null; // Not found
   }
 
-  const status = check.rows[0].availability_status;
-  if (status === "booked") {
+  if (check.rows[0].availability_status === "booked") {
     return "Cannot delete vehicle because it is booked";
   }
 
-  // Delete vehicle
   await pool.query(`DELETE FROM vehicles WHERE id = $1`, [vehicleId]);
-
   return true;
 };
 

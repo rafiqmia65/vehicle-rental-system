@@ -131,7 +131,117 @@ const getAllBookingsService = async (user: any) => {
   }
 };
 
+const updateBookingService = async (
+  bookingId: number,
+  loggedInUser: any,
+  newStatus: string
+) => {
+  // Fetch booking
+  const bookingQuery = await pool.query(
+    `SELECT 
+      id, customer_id, vehicle_id, rent_start_date, rent_end_date,
+      total_price, status
+     FROM bookings
+     WHERE id = $1`,
+    [bookingId]
+  );
+
+  if (bookingQuery.rows.length === 0) {
+    throw new Error("Booking not found");
+  }
+
+  const booking = bookingQuery.rows[0];
+
+  // =========================================================
+  // CUSTOMER CANCEL LOGIC
+  // =========================================================
+  if (loggedInUser.role === "customer") {
+    if (newStatus !== "cancelled") {
+      throw new Error("Customers can only cancel bookings");
+    }
+
+    if (booking.customer_id !== loggedInUser.id) {
+      throw new Error("You can modify only your own bookings");
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+    const startDate = booking.rent_start_date.toISOString().split("T")[0];
+
+    if ((today as any) >= startDate) {
+      throw new Error("You can cancel only before the rent start date");
+    }
+
+    if (booking.status === "cancelled") {
+      throw new Error("This booking is already cancelled");
+    }
+
+    if (booking.status === "returned") {
+      throw new Error("Returned bookings cannot be cancelled");
+    }
+
+    // Update status → cancelled
+    const updated = await pool.query(
+      `
+      UPDATE bookings
+      SET status = 'cancelled'
+      WHERE id = $1
+      RETURNING *
+      `,
+      [bookingId]
+    );
+
+    // Vehicle → available
+    await pool.query(
+      `UPDATE vehicles SET availability_status = 'available' WHERE id = $1`,
+      [booking.vehicle_id]
+    );
+
+    return {
+      message: "Booking cancelled successfully",
+      booking: updated.rows[0],
+    };
+  }
+
+  // =========================================================
+  // ADMIN RETURN LOGIC
+  // =========================================================
+  if (loggedInUser.role === "admin") {
+    if (newStatus !== "returned") {
+      throw new Error("Admin can only mark bookings as returned");
+    }
+
+    if (booking.status === "returned") {
+      throw new Error("This booking is already returned");
+    }
+
+    const updated = await pool.query(
+      `
+      UPDATE bookings
+      SET status = 'returned'
+      WHERE id = $1
+      RETURNING *
+      `,
+      [bookingId]
+    );
+
+    // Vehicle → available
+    await pool.query(
+      `UPDATE vehicles SET availability_status = 'available' WHERE id = $1`,
+      [booking.vehicle_id]
+    );
+
+    return {
+      message: "Booking marked as returned. Vehicle is now available",
+      booking: updated.rows[0],
+      vehicle: { availability_status: "available" },
+    };
+  }
+
+  throw new Error("Invalid role");
+};
+
 export const bookingServices = {
   createBookingService,
   getAllBookingsService,
+  updateBookingService,
 };

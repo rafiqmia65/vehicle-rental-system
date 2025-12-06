@@ -60,7 +60,56 @@ const getAllBookings = async (req: Request, res: Response) => {
   }
 };
 
+const updateBooking = async (req: Request, res: Response) => {
+  try {
+    const bookingId = Number(req.params.bookingId);
+    const { status } = req.body;
+    const loggedInUser = (req as any).user;
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: "Status is required",
+      });
+    }
+
+    const result = await bookingServices.updateBookingService(
+      bookingId,
+      loggedInUser,
+      status
+    );
+
+    const booking = result.booking;
+
+    const data: any = {
+      id: booking.id,
+      customer_id: booking.customer_id,
+      vehicle_id: booking.vehicle_id,
+      rent_start_date: booking.rent_start_date.toISOString().split("T")[0],
+      rent_end_date: booking.rent_end_date.toISOString().split("T")[0],
+      total_price: Number(booking.total_price),
+      status: booking.status,
+    };
+
+    if (result.vehicle) {
+      data.vehicle = result.vehicle; // ONLY for admin "returned"
+    }
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: data,
+    });
+  } catch (err: any) {
+    res.status(400).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
 export const bookingControllers = {
   createBooking,
   getAllBookings,
+  updateBooking,
 };

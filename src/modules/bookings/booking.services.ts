@@ -50,6 +50,88 @@ const createBookingService = async (payload: any) => {
   return { booking, vehicle };
 };
 
+const getAllBookingsService = async (user: any) => {
+  if (user.role === "admin") {
+    // Admin: all bookings with customer and vehicle info
+    const result = await pool.query(`
+      SELECT 
+        bookings.id,
+        bookings.customer_id,
+        bookings.vehicle_id,
+        bookings.rent_start_date,
+        bookings.rent_end_date,
+        bookings.total_price,
+        bookings.status,
+        users.name,
+        users.email,
+        vehicles.vehicle_name,
+        vehicles.registration_number,
+        vehicles.type
+      FROM bookings
+      JOIN users ON bookings.customer_id = users.id
+      JOIN vehicles ON bookings.vehicle_id = vehicles.id
+      ORDER BY bookings.id DESC
+    `);
+
+    return result.rows.map((row) => ({
+      id: row.id,
+      customer_id: row.customer_id,
+      vehicle_id: row.vehicle_id,
+      rent_start_date: row.rent_start_date.toISOString().split("T")[0],
+      rent_end_date: row.rent_end_date.toISOString().split("T")[0],
+      total_price: Number(row.total_price),
+      status: row.status,
+      customer: {
+        name: row.name,
+        email: row.email,
+      },
+      vehicle: {
+        vehicle_name: row.vehicle_name,
+        registration_number: row.registration_number,
+        type: row.type,
+      },
+    }));
+  } else {
+    // Customer: only own bookings
+    const result = await pool.query(
+      `
+      SELECT 
+        bookings.id,
+        bookings.customer_id,
+        bookings.vehicle_id,
+        bookings.rent_start_date,
+        bookings.rent_end_date,
+        bookings.total_price,
+        bookings.status,
+        vehicles.vehicle_name,
+        vehicles.registration_number,
+        vehicles.type
+      FROM bookings
+      JOIN vehicles ON bookings.vehicle_id = vehicles.id
+      WHERE bookings.customer_id = $1
+      ORDER BY bookings.id DESC
+    `,
+      [user.id]
+    );
+
+    return result.rows.map((row) => ({
+      id: row.id,
+      customer_id: row.customer_id,
+      vehicle_id: row.vehicle_id,
+      rent_start_date: row.rent_start_date.toISOString().split("T")[0],
+      rent_end_date: row.rent_end_date.toISOString().split("T")[0],
+      total_price: Number(row.total_price),
+      status: row.status,
+      vehicle: {
+        vehicle_name: row.vehicle_name,
+        registration_number: row.registration_number,
+        type: row.type,
+      },
+    }));
+  }
+};
+
 export const bookingServices = {
   createBookingService,
+  getAllBookingsService,
 };

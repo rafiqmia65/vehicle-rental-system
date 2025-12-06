@@ -33,7 +33,7 @@ const updateUserService = async (userId: number, payload: any) => {
 const deleteUserService = async (userId: number) => {
   // Check for active bookings first
   const bookingCheck = await pool.query(
-    `SELECT id FROM bookings WHERE user_id = $1 AND status = 'booked'`,
+    `SELECT id FROM bookings WHERE customer_id = $1 AND status = 'booked'`,
     [userId]
   );
 
